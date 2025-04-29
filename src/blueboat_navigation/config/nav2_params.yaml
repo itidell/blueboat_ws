@@ -1,0 +1,317 @@
+# === NAV2 PARAMETERS ===
+# See documentation for details: https://navigation.ros.org/configuration/index.html
+
+# Parameters for the Lifecycle Manager node (manages startup/shutdown of other Nav2 nodes)
+lifecycle_manager:
+  ros__parameters:
+    autostart: true             # Automatically start managed nodes on launch
+    node_names:                 # List of nodes managed by lifecycle manager
+      - map_server
+      - amcl                  # We will use this slot later for robot_localization integration
+      - controller_server
+      - planner_server
+      - behavior_server
+      - bt_navigator
+      # - velocity_smoother    # Optional: Add if needed
+
+# Parameters for the Map Server (loads the static map)
+map_server:
+  ros__parameters:
+    use_sim_time: false          # Use system clock (change if using Gazebo)
+    yaml_filename: "maps/dummy_map.yaml" # Relative path within the package OR absolute path
+
+# Parameters for AMCL (used for localization with lidar - we'll adjust this later)
+# For Day 3/4 VM test, Nav2 needs a pose source. We rely on robot_localization providing map->odom->base_link
+# but Nav2 often expects amcl to provide map->odom. This section reserves the name.
+amcl:
+  ros__parameters:
+    use_sim_time: false
+    alpha1: 0.2                 # Placeholder values, not used actively yet
+    alpha2: 0.2
+    alpha3: 0.2
+    alpha4: 0.2
+    alpha5: 0.2
+    base_frame_id: "base_link"
+    beam_skip_distance: 0.5
+    beam_skip_error_threshold: 0.9
+    beam_skip_threshold: 0.3
+    do_beamskip: false
+    global_frame_id: "map"
+    lambda_short: 0.1
+    laser_likelihood_max_dist: 2.0
+    laser_max_range: 100.0
+    laser_min_range: -1.0
+    max_beams: 60
+    max_particles: 2000
+    min_particles: 500
+    odom_frame_id: "odom"
+    pf_err: 0.05
+    pf_z: 0.99
+    recovery_alpha_fast: 0.0
+    recovery_alpha_slow: 0.0
+    resample_interval: 1
+    robot_model_type: "differential" # Or "omnidirectional" / "holonomic"
+    save_pose_rate: 0.5
+    sigma_hit: 0.2
+    tf_broadcast: true           # AMCL typically broadcasts map->odom
+    transform_tolerance: 1.0
+    update_min_a: 0.2
+    update_min_d: 0.25
+    z_hit: 0.5
+    z_max: 0.05
+    z_rand: 0.5
+    z_short: 0.05
+    scan_topic: /scan             # Use placeholder scan data
+
+# Parameters for the Controller Server (hosts the local trajectory planner plugin, e.g., DWB)
+controller_server:
+  ros__parameters:
+    use_sim_time: false
+    controller_frequency: 10.0    # How often to compute and publish commands
+    min_x_velocity: 0.0          # Minimum allowed forward speed (m/s) - Allow stopping
+    max_x_velocity: 0.26         # Maximum allowed forward speed (m/s) - Adjust based on robot
+    min_y_velocity: 0.0          # Minimum allowed strafing speed (m/s) - Set to 0 for non-holonomic
+    max_y_velocity: 0.0          # Maximum allowed strafing speed (m/s) - Set to 0 for non-holonomic
+    min_theta_velocity: -0.5     # Minimum allowed rotation speed (rad/s) - Adjust
+    max_theta_velocity: 0.5      # Maximum allowed rotation speed (rad/s) - Adjust
+    acc_lim_x: 1.0               # Max linear acceleration (m/s^2) - Adjust
+    acc_lim_y: 0.0               # Max strafing acceleration (m/s^2) - Set to 0 for non-holonomic
+    acc_lim_theta: 1.5           # Max angular acceleration (rad/s^2) - Adjust
+    decel_lim_x: -1.0              # Max linear deceleration (m/s^2) - Negative value
+    decel_lim_y: 0.0               # Max strafing deceleration (m/s^2) - Set to 0
+    decel_lim_theta: -1.5          # Max angular deceleration (rad/s^2) - Negative value
+    vx_samples: 10                # Number of velocity samples for DWB - Fine tune later
+    vy_samples: 1                 # Set to 1 for non-holonomic
+    vtheta_samples: 20            # Number of angular velocity samples for DWB - Fine tune later
+    controller_plugin_ids: ["FollowPath"] # Default plugin
+    controller_plugin_types: ["dwb_core::DWBLocalPlanner"] # Default plugin type
+    # --- DWB Parameters (Plugin-specific under FollowPath namespace) ---
+    FollowPath:
+      plugin: "dwb_core::DWBLocalPlanner"
+      # Debugging
+      debug_trajectory_details: false
+      publish_evaluation: false
+      publish_global_plan: true
+      publish_local_plan: true
+      publish_trajectories: true
+      # Goal Checking (how close to goal is "close enough")
+      xy_goal_tolerance: 0.25      # meters
+      yaw_goal_tolerance: 0.25     # radians (~15 degrees)
+      stateful: true              # Remember previous command state
+      # Forward Simulation (how far ahead to project trajectories)
+      sim_time: 1.7               # seconds
+      # Trajectory Generation
+      max_speed_xy: 0.26          # Must match max_x_velocity above
+      min_speed_xy: 0.0           # Must match min_x_velocity above
+      max_speed_theta: 0.5        # Must match max_theta_velocity above
+      min_speed_theta: -0.5       # Must match min_theta_velocity above
+      acc_lim_x: 1.0
+      acc_lim_y: 0.0
+      acc_lim_theta: 1.5
+      decel_lim_x: -1.0
+      decel_lim_y: 0.0
+      decel_lim_theta: -1.5
+      min_vel_x: 0.0
+      min_vel_y: 0.0
+      max_vel_x: 0.26
+      max_vel_y: 0.0
+      max_vel_theta: 0.5
+      min_vel_theta: -0.5
+      # Path Following (how closely to stick to the global plan)
+      goal_dist_tol: 0.25         # Meters, same as xy_goal_tolerance
+      path_dist_tol: 0.5          # Meters, how far deviation from path is allowed
+      prune_plan: true            # Remove old parts of the global plan as we pass them
+      short_circuit_trajectory_evaluation: true # Stop evaluating a trajectory if a critic scores < 0
+      transform_tolerance: 0.2    # seconds
+      # Critic Scoring (how trajectories are evaluated - Use standard critics initially)
+      critic_names: ["RotateToGoal", "Oscillation", "BaseObstacle", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]
+      BaseObstacle:
+        plugin: "dwb_critics::BaseObstacle"
+        scale: 0.02               # Tune cost penalty for proximity to obstacles
+        sum_scores: false
+      GoalAlign:
+        plugin: "dwb_critics::GoalAlign"
+        scale: 0.0                # Disable for now, focus on PathAlign
+        forward_point_distance: 0.325
+        aggregation_type: "last"
+        sum_scores: false
+      GoalDist:
+        plugin: "dwb_critics::GoalDist"
+        scale: 1.0                # Moderate penalty for distance to goal
+        aggregation_type: "last"
+        sum_scores: false
+      Oscillation:
+        plugin: "dwb_critics::Oscillation"
+        scale: 0.1                # Moderate penalty for oscillating behavior
+        x_only_threshold: 0.05
+        sum_scores: false
+      PathAlign:
+        plugin: "dwb_critics::PathAlign"
+        scale: 2.0                # Strong penalty for not aligning with path direction
+        forward_point_distance: 0.325
+        aggregation_type: "last"
+        sum_scores: false
+      PathDist:
+        plugin: "dwb_critics::PathDist"
+        scale: 1.0                # Moderate penalty for distance from path
+        aggregation_type: "last"
+        sum_scores: false
+      RotateToGoal:
+        plugin: "dwb_critics::RotateToGoal"
+        scale: 1.0                # Moderate penalty for not rotating towards goal when close
+        lookahead_time: -1.0
+        slowing_factor: 5.0
+        sum_scores: false
+
+# Parameters for the Planner Server (hosts the global path planning plugin, e.g., NavFn)
+planner_server:
+  ros__parameters:
+    use_sim_time: false
+    expected_planner_frequency: 1.0 # How often to expect planner to replan (if needed)
+    planner_plugins: ["GridBased"] # Default plugin ID
+    GridBased:
+      plugin: "nav2_navfn_planner/NavfnPlanner" # Default ROS 2 global planner
+      tolerance: 0.5                # meters, tolerance for planning around obstacles
+      use_astar: false              # false = Dijkstra, true = A*
+      allow_unknown: true           # Allow planning through unknown space
+
+# Parameters for the Behavior Server (hosts behavior plugins like Spin, Backup, Wait)
+behavior_server:
+  ros__parameters:
+    use_sim_time: false
+    costmap_topic: local_costmap/costmap_raw # Costmap used by behaviors
+    footprint_topic: local_costmap/published_footprint # Footprint used by behaviors
+    cycle_frequency: 10.0           # Frequency for server execution loop
+    behavior_plugins: ["spin", "backup", "wait"] # Default behaviors
+    spin:
+      plugin: "nav2_behaviors/Spin"
+    backup:
+      plugin: "nav2_behaviors/BackUp"
+    wait:
+      plugin: "nav2_behaviors/Wait"
+    global_frame: map             # Reference frame for behaviors
+    robot_base_frame: base_link   # Robot frame for behaviors
+    transform_tolerance: 0.1      # TF tolerance
+
+# Parameters for the BT Navigator (executes the navigation Behavior Tree)
+bt_navigator:
+  ros__parameters:
+    use_sim_time: false
+    global_frame: map
+    robot_base_frame: base_link
+    odom_topic: /odometry/filtered  # Use the EKF output topic
+    bt_loop_duration: 10.0          # BT execution frequency
+    default_server_timeout: 20.0    # Timeout for service calls
+    # Behavior Tree XML file to use (using default NavigateToPose initially)
+    # We can customize this later for patrol/trash collection
+    plugin_lib_names:
+    - nav2_compute_path_to_pose_action_bt_node
+    - nav2_compute_path_through_poses_action_bt_node
+    - nav2_follow_path_action_bt_node
+    - nav2_back_up_action_bt_node
+    - nav2_spin_action_bt_node
+    - nav2_wait_action_bt_node
+    - nav2_clear_costmap_service_bt_node
+    - nav2_is_stuck_condition_bt_node
+    - nav2_goal_reached_condition_bt_node
+    - nav2_goal_updated_condition_bt_node
+    - nav2_globally_updated_goal_condition_bt_node
+    - nav2_is_path_valid_condition_bt_node
+    - nav2_initial_pose_received_condition_bt_node
+    - nav2_reinitialize_global_localization_service_bt_node
+    - nav2_rate_controller_bt_node
+    - nav2_distance_controller_bt_node
+    - nav2_speed_controller_bt_node
+    - nav2_truncate_path_action_bt_node
+    - nav2_goal_updater_node_bt_node
+    - nav2_recovery_node_bt_node
+    - nav2_pipeline_sequence_bt_node
+    - nav2_round_robin_node_bt_node
+    - nav2_transform_available_condition_bt_node
+    - nav2_time_expired_condition_bt_node
+    - nav2_distance_traveled_condition_bt_node
+    - nav2_single_trigger_bt_node
+    - nav2_is_battery_low_condition_bt_node
+    - nav2_navigate_generated_path_action_bt_node
+
+# --- Global Costmap Parameters ---
+# Operates in the 'map' frame, used for global planning
+global_costmap:
+  ros__parameters:
+    use_sim_time: false
+    global_frame: map             # Must be 'map'
+    robot_base_frame: base_link   # Robot's base link
+    update_frequency: 1.0         # How often to update (lower frequency is okay)
+    publish_frequency: 1.0        # How often to publish visualization
+    transform_tolerance: 0.5      # seconds
+    # Footprint: Define the robot's shape (use a simple rectangle for now)
+    # Can also use radius for circular robots or load from file/topic
+    robot_radius: 0.3             # Use if robot is roughly circular (meters)
+    # footprint: "[[0.4, 0.25], [0.4, -0.25], [-0.4, -0.25], [-0.4, 0.25]]" # Example rectangular footprint (X,Y) pairs relative to base_link origin
+    # Plugins define layers of the costmap
+    plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
+    # Static Layer (reads the map from map_server)
+    static_layer:
+      plugin: "nav2_costmap_2d::StaticLayer"
+      map_subscribe_transient_local: True # Subscribe to map topic
+    # Obstacle Layer (uses sensor data like /scan to add obstacles)
+    obstacle_layer:
+      plugin: "nav2_costmap_2d::ObstacleLayer"
+      enabled: true
+      observation_sources: scan   # Name of the source(s) defined below
+      scan:                       # Configuration for the 'scan' source
+        topic: /scan              # Use placeholder lidar data
+        max_obstacle_height: 2.0  # meters
+        clearing: true            # Allow sensor readings to clear obstacles
+        marking: true             # Allow sensor readings to mark obstacles
+        data_type: "LaserScan"
+        raytrace_max_range: 3.0   # meters - Max range to clear obstacles
+        obstacle_max_range: 2.5   # meters - Max range to mark obstacles
+        inf_is_valid: false       # Treat infinity readings as invalid
+    # Inflation Layer (adds a buffer zone around obstacles)
+    inflation_layer:
+      plugin: "nav2_costmap_2d::InflationLayer"
+      cost_scaling_factor: 3.0    # Exponential rate of decay - lower = more gradual inflation
+      inflation_radius: 0.35      # meters - Inflate obstacles by this radius (should be > robot_radius)
+    # --- Common Layer Parameters ---
+    # Apply to all layers unless overridden in a specific layer's config
+    always_send_full_costmap: true
+
+# --- Local Costmap Parameters ---
+# Operates in the 'odom' frame, used for local planning and obstacle avoidance
+local_costmap:
+  ros__parameters:
+    use_sim_time: false
+    global_frame: odom            # Usually 'odom' for local map
+    robot_base_frame: base_link
+    update_frequency: 5.0         # Update more frequently than global map
+    publish_frequency: 2.0        # Publish visualization less frequently
+    transform_tolerance: 0.5      # seconds
+    width: 3                      # Width of the rolling window map (meters)
+    height: 3                     # Height of the rolling window map (meters)
+    resolution: 0.05              # Resolution (meters per pixel) - Often finer than global map
+    robot_radius: 0.3             # Use if robot is roughly circular
+    # footprint: "[[0.4, 0.25], [0.4, -0.25], [-0.4, -0.25], [-0.4, 0.25]]" # Example rectangular footprint
+    plugins: ["obstacle_layer", "inflation_layer"] # Typically no static map needed locally
+    # Obstacle Layer (uses sensor data like /scan)
+    obstacle_layer:
+      plugin: "nav2_costmap_2d::ObstacleLayer"
+      enabled: true
+      observation_sources: scan   # Use the same source name as global costmap
+      scan:                       # Configuration should match global costmap scan source
+        topic: /scan
+        max_obstacle_height: 2.0
+        clearing: true
+        marking: true
+        data_type: "LaserScan"
+        raytrace_max_range: 3.0   # Should generally match global settings
+        obstacle_max_range: 2.5   # Should generally match global settings
+        inf_is_valid: false
+    # Inflation Layer (adds buffer zone)
+    inflation_layer:
+      plugin: "nav2_costmap_2d::InflationLayer"
+      cost_scaling_factor: 3.0
+      inflation_radius: 0.35      # Should generally match global setting
+    # --- Common Layer Parameters ---
+    always_send_full_costmap: true
+    rolling_window: true          # Local map moves with the robot

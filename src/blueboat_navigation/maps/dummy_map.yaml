@@ -1,0 +1,7 @@
+image: dummy_map.pgm
+mode: trinary       # Or 'scale'. Trinary treats thresholds as occupied/free/unknown. Scale uses grayscale values.
+resolution: 0.1    # meters per pixel (e.g., 10cm per pixel) - Adjust if needed
+origin: [-5.0, -5.0, 0.0] # Position of the bottom-left pixel of the map in the map frame (meters). Center the 100x100 map@0.1res around (0,0)
+negate: 0           # 0 = white is free, black is occupied. 1 = reverse.
+occupied_thresh: 0.65 # Pixels darker than this threshold are occupied
+free_thresh: 0.25     # Pixels lighter than this threshold are free
