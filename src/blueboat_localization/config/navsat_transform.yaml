@@ -1,0 +1,37 @@
+# Configuration for robot_localization navsat_transform_node
+# Converts GPS coordinates to the map frame
+
+navsat_transform_node: # Node name must match the launch file
+  ros__parameters:
+    # GENERAL PARAMETERS
+    frequency: 5.0                       # Update frequency (Hz), can be lower than EKF
+    delay: 0.05                          # Time delay (seconds) to wait for required transforms
+    publish_filtered_gps: true           # Publish the /gps/filtered topic
+    use_odometry_yaw: false              # Use yaw from odometry source (requires orientation in odom msg)
+                                         # Set to false to use IMU yaw for datum calculation.
+                                         # NOTE: Our placeholder IMU doesn't provide reliable absolute yaw,
+                                         # so datum calculation might be inaccurate/fail until real IMU fusion.
+    wait_for_datum: true                 # IMPORTANT: Requires valid GPS, Odometry, AND IMU (with orientation)
+                                         # before computing the first map->odom transform.
+                                         # Set to false for initial testing if IMU lacks orientation.
+                                         # We will keep it true as per plan and expect warnings.
+    zero_altitude: true                  # Treat robot altitude as 0 in the map frame (common for surface vehicles)
+    broadcast_cartesian_transform: true  # Publish the map->odom transform
+    broadcast_utm_transform: false       # Don't publish map->utm transform unless needed
+    # Set transform name explicitly if needed, otherwise defaults work
+    # map_frame: map
+    # odom_frame: odom
+    # base_link_frame: base_link
+
+    # DATUM PARAMETERS (adjust for your actual operating location if known)
+    magnetic_declination_radians: 0.0    # Declination (east is positive) between magnetic and true north. Lookup required for real operation.
+    yaw_offset: 0.0                      # Offset of IMU frame's zero heading from true north (radians)
+    # Optionally specify a datum (lat/lon/heading) manually instead of waiting for one
+    # datum: [55.944904, -3.186214, 0.0] # Example: Edinburgh, UK. Replace with your location.
+
+    # TOPIC PARAMETERS (default topic names are used unless remapped in launch file)
+    # imu_topic: /imu/data
+    # gps_topic: /gps/fix
+    # odom_topic: /odometry/filtered
+    # gps_filtered_topic: /gps/filtered
+    # odometry_gps_topic: /odometry/gps  # NavSatFix->Odometry output

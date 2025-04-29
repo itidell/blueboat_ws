@@ -1,0 +1,27 @@
+# ROS workspace files
+build/
+install/
+log/
+
+# Python cache files
+*.pyc
+__pycache__/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# User-specific files (often created by IDEs)
+*.swp
+*~
+*.bak
+*.orig
+.vscode/
+.idea/
+*.project
+*.pydevproject
+*.cproject
+
+# Other common ignores
+*.metadata
+*.log
