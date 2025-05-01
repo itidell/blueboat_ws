@@ -12,7 +12,7 @@ lifecycle_manager:
       - planner_server
       - behavior_server
       - bt_navigator
-      # - velocity_smoother    # Optional: Add if needed
+      #- velocity_smoother    # Optional: Add if needed
 
 # Parameters for the Map Server (loads the static map)
 map_server:

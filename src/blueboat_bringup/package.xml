@@ -16,6 +16,7 @@
   <exec_depend>blueboat_sensors</exec_depend>
   <depend>blueboat_localization</depend>
   <depend>robot_state_publisher</depend>
+  <depend>blueboat_navigation</depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

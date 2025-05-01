@@ -11,6 +11,7 @@ find_package(ament_cmake REQUIRED)
 find_package(blueboat_description REQUIRED)  # Only keep for CMake packages
 find_package(robot_state_publisher REQUIRED)
 find_package(blueboat_localization REQUIRED)
+find_package(blueboat_navigation REQUIRED)
 # Remove these lines - they're Python packages
 # find_package(blueboat_sensors REQUIRED)
 # find_package(blueboat_hardware_interface REQUIRED)
